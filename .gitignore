@@ -1,0 +1,21 @@
+# n8n
+.n8n/
+*.env
+.env.local
+.env.production
+
+# Credentials
+credentials.json
+token.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Node
+node_modules/
+
