@@ -1,0 +1,486 @@
+{
+  "name": "Telegram Job Application Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "*"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        32
+      ],
+      "id": "488c74b4-6191-42bc-86b3-1d18748ba7c1",
+      "name": "Telegram Trigger",
+      "webhookId": "058f727c-8a46-49f6-984a-0868b1158665",
+      "credentials": {
+        "telegramApi": {
+          "id": "cVhqQQgchNIhFUp9",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6ff5c28f-a9c5-49de-ba83-f1ce7e2460a1",
+              "leftValue": "={{ $json.is_url }}",
+              "rightValue": "@",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        32
+      ],
+      "id": "e0959d07-8371-4c7f-9421-35c8134626bb",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.job_url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        672,
+        128
+      ],
+      "id": "63f483da-94d4-48e3-91c6-99d46312f43f",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1424,
+        256
+      ],
+      "id": "e005f88a-9e72-4b2e-bf83-989aac049109",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "PepafklFqMuwvsmj",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const extracted = $input.first().json.output;\n\n// Get CV choice and chat_id from earlier node\nconst cvChoice = $('Select CV Summary').first().json.cv_choice;\nconst chatId = $('Select CV Summary').first().json.chat_id;\n\nreturn [{\n  json: {\n    to_email:  extracted.to_email,\n    subject:   extracted.subject,\n    email_body: extracted.email_body,\n    cv_choice: cvChoice,\n    role:      extracted.role,\n    chat_id:   chatId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        32
+      ],
+      "id": "55a61fe5-d94d-407f-be73-40d87ce05f91",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Code in JavaScript').item.json.to_email }}",
+        "subject": "={{ $('Code in JavaScript').item.json.subject }}",
+        "emailType": "text",
+        "message": "={{ $('Code in JavaScript').item.json.email_body }}",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2144,
+        32
+      ],
+      "id": "632a7ae5-14be-4c5c-9e75-cd3ed411c5e0",
+      "name": "Send a message",
+      "webhookId": "e926c7b7-8215-43b1-9d90-5aaa21691d33",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BojaUl0Si2KyBL88",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Code in JavaScript').item.json.chat_id }}",
+        "text": "=Application sent!\n\nRole:  {{ $('Code in JavaScript').item.json.role }}\nCV:    {{ $('Code in JavaScript').item.json.cv_choice }}\nTo:    {{ $('Code in JavaScript').item.json.to_email }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2368,
+        32
+      ],
+      "id": "62bc4613-f52d-4faa-921a-c3ff96b963b6",
+      "name": "Send a text message",
+      "webhookId": "bc4089c1-a989-480e-aa3c-7e39a5eb599b",
+      "credentials": {
+        "telegramApi": {
+          "id": "cVhqQQgchNIhFUp9",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.message.text;\nconst chatId = $input.first().json.message.chat.id;\nconst isURL = text.startsWith('http');\n\nreturn [{\n  json: {\n    raw_input: text,\n    chat_id:   chatId,\n    is_url:    isURL,\n    email:     isURL ? '' : text.trim(),\n    job_url:   isURL ? text.trim() : ''\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        32
+      ],
+      "id": "df275e9f-bebf-4c84-b8b4-99d41e3f6846",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a021a7a3-ff6f-40ae-a8c2-019688e4c342",
+              "name": "job_details",
+              "value": "={{ $('Code in JavaScript1').item.json.raw_input }}",
+              "type": "string"
+            },
+            {
+              "id": "02ae57fd-2d43-4c18-9fd0-cb0181037418",
+              "name": "email",
+              "value": "={{ $('Code in JavaScript1').item.json.raw_input }}",
+              "type": "string"
+            },
+            {
+              "id": "433917fe-876a-4a1f-a9ed-fc66915ef4d3",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        896,
+        -64
+      ],
+      "id": "0a307d06-e007-4054-8d1e-1ec9f1fe86b6",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e9e53345-6a88-4399-ad14-b08b26a5518c",
+              "name": "job_details",
+              "value": "={{ $json }}",
+              "type": "string"
+            },
+            {
+              "id": "2a1e37be-cc61-4c0a-af2d-ad619e41d5ba",
+              "name": "email",
+              "value": "extracted by AI",
+              "type": "string"
+            },
+            {
+              "id": "73dbf9be-12f9-462e-b0a8-96726bdd7ea5",
+              "name": "chat_id",
+              "value": "={{ $('Code in JavaScript1').item.json.chat_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        896,
+        128
+      ],
+      "id": "8274d3e9-de3d-4cc2-8503-904e9ca62a08",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const jobDetails = $input.first().json.job_details;\nconst chatId = $input.first().json.chat_id;\nconst email = $input.first().json.email;\n\n// Hardcoded CV summaries for each CV type\nconst cvSummaries = {\n  'cv_ai_data_trainer': {\n    summary: 'Experienced AI Data Trainer specializing in machine learning model evaluation, data annotation, and quality assurance for AI systems.',\n    key_skills: 'Machine Learning, Data Annotation, Model Evaluation, Quality Assurance, Python, TensorFlow, Data Analysis',\n    experience_highlights: 'Led data annotation projects improving model accuracy by 25%, Evaluated and refined ML models for production deployment, Managed quality control processes for AI training datasets',\n    education: 'Bachelor of Science in Computer Science'\n  },\n  'cv_data_analyst': {\n    summary: 'Results-driven Data Analyst with expertise in business intelligence, data visualization, and statistical analysis to drive data-informed decision making.',\n    key_skills: 'Data Analysis, SQL, Python, Tableau, Power BI, Statistical Analysis, Business Intelligence, Excel',\n    experience_highlights: 'Developed dashboards that increased operational efficiency by 30%, Conducted statistical analysis leading to $500K cost savings, Automated reporting processes reducing manual work by 40%',\n    education: 'Bachelor of Science in Data Science'\n  },\n  'cv_ai_automation_engineer': {\n    summary: 'Innovative AI Automation Engineer focused on building intelligent workflows, process automation, and AI-powered solutions to optimize business operations.',\n    key_skills: 'AI Automation, Workflow Design, Python, n8n, Zapier, API Integration, Process Optimization, Machine Learning Integration',\n    experience_highlights: 'Designed AI-powered automation systems saving 100+ hours monthly, Integrated LLM APIs into business workflows increasing productivity by 45%, Built end-to-end automation solutions for enterprise clients',\n    education: 'Bachelor of Engineering in Software Engineering'\n  }\n};\n\n// Convert to lowercase for case-insensitive matching\nconst jobDetailsLower = jobDetails.toLowerCase();\n\n// Default CV choice\nlet cvChoice = 'cv_data_analyst';\n\n// Check AI Data Trainer first\nif (jobDetailsLower.includes('ai data trainer') || \n    jobDetailsLower.includes('data trainer') || \n    jobDetailsLower.includes('data labelling') || \n    jobDetailsLower.includes('data labeling') || \n    jobDetailsLower.includes('prompt engineering') || \n    jobDetailsLower.includes('model evaluation')) {\n  cvChoice = 'cv_ai_data_trainer';\n} \n// Then check Data Analyst\nelse if (jobDetailsLower.includes('data analyst') || \n         jobDetailsLower.includes('analyst') || \n         jobDetailsLower.includes('power bi') || \n         jobDetailsLower.includes('sql') || \n         jobDetailsLower.includes('reporting') || \n         jobDetailsLower.includes('business intelligence')) {\n  cvChoice = 'cv_data_analyst';\n} \n// Then check AI Automation Engineer\nelse if (jobDetailsLower.includes('ai automation') || \n         jobDetailsLower.includes('automation engineer') || \n         jobDetailsLower.includes('n8n') || \n         jobDetailsLower.includes('zapier') || \n         jobDetailsLower.includes('workflow') || \n         jobDetailsLower.includes('ai agents') || \n         jobDetailsLower.includes('ai agent') || \n         jobDetailsLower.includes('process automation')) {\n  cvChoice = 'cv_ai_automation_engineer';\n}\n\nconst selectedCV = cvSummaries[cvChoice];\n\nreturn [{\n  json: {\n    job_details: jobDetails,\n    cv_choice: cvChoice,\n    cv_summary: selectedCV.summary,\n    key_skills: selectedCV.key_skills,\n    experience_highlights: selectedCV.experience_highlights,\n    education: selectedCV.education,\n    chat_id: chatId,\n    email: email\n  }\n}];"
+      },
+      "id": "acfece47-cecc-42a8-a135-d5d645984251",
+      "name": "Select CV Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.cv_choice === 'cv_ai_automation_engineer' ? '1sc9G6KE-NsDEL9M3VslRmGwz5dNWjshP' : $json.cv_choice === 'cv_ai_data_trainer' ? '1Pe_luJF7rhFNJWIc_NEDFUbGU66XSuQ1' : '12bqM2rX9NlrT0_Jc3445iDiaCuY5TThC' }}"
+        },
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "id": "19cc4363-df4f-44e9-8c39-a690932e8991",
+      "name": "Download CV File",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1920,
+        32
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "xnlHqGqTBTCPKLQy",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.job_details }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "subject",
+              "description": "Email subject line in format: Application for [role] \u2014 Precious Agu",
+              "required": true
+            },
+            {
+              "name": "email_body",
+              "description": "Professional application email body (250-350 words) with proper formatting using \\n\\n for paragraph breaks. Must follow recruitment standards: compelling opening, technical fit paragraph, proven impact paragraph, professional closing. Must end with: \\n\\nBest regards,\\n\\nPrecious Agu\\nyour-email@gmail.com",
+              "required": true
+            },
+            {
+              "name": "to_email",
+              "description": "Recipient email address extracted from job details or use provided email",
+              "required": true
+            },
+            {
+              "name": "role",
+              "description": "Job title from the job details",
+              "required": true
+            }
+          ]
+        },
+        "options": {
+          "systemPromptTemplate": "You are Precious Agu's professional job application assistant. Craft compelling, recruitment-standard application emails that stand out to hiring managers.\n\nCV CONTEXT PROVIDED:\n- cv_summary: Professional summary statement\n- key_skills: Technical and professional competencies\n- experience_highlights: Quantifiable achievements\n- education: Academic background\n\nEMAIL WRITING STANDARDS:\n\n1. OPENING (1-2 sentences):\n   - State the specific role you're applying for\n   - Include a compelling value proposition that addresses the employer's needs\n   - Avoid generic phrases like \"I am writing to apply\" or \"I am excited\"\n\n2. BODY PARAGRAPH 1 - Technical Fit (2-3 sentences):\n   - Reference 3-4 specific skills from key_skills that match the job requirements\n   - Provide a concrete example from experience_highlights\n   - Use active voice and strong action verbs\n\n3. BODY PARAGRAPH 2 - Proven Impact (2-3 sentences):\n   - Highlight 2-3 quantifiable achievements from experience_highlights\n   - Connect achievements to business value (efficiency, cost savings, accuracy, etc.)\n   - Demonstrate problem-solving ability\n\n4. CLOSING (1-2 sentences):\n   - Express genuine interest in contributing to the organization\n   - Include a forward-looking statement about discussing the role\n   - Professional sign-off\n\nFORMATTING REQUIREMENTS:\n- Use \\n\\n for paragraph breaks (double line breaks)\n- Keep total length 250-350 words\n- Professional tone: confident but not arrogant\n- Avoid clich\u00e9s: passionate, team player, fast learner, etc.\n- Use specific terminology from the job description when provided\n\nSIGNATURE FORMAT (CRITICAL):\nBest regards,\\n\\nPrecious Agu\\nyour-email@gmail.com\n\nEXAMPLE STRUCTURE:\n[Opening with value proposition]\\n\\n[Technical skills with example]\\n\\n[Quantifiable achievements]\\n\\n[Closing statement]\\n\\nBest regards,\\n\\nPrecious Agu\\nyour-email@gmail.com"
+        }
+      },
+      "id": "efc31f01-3fb5-472d-87f1-d91c976595f0",
+      "name": "Extract Application Email",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        32
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract Application Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Download CV File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Select CV Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Select CV Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    },
+    "Select CV Summary": {
+      "main": [
+        [
+          {
+            "node": "Extract Application Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download CV File": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Application Email": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9e219e86-193b-4e55-a9f6-8a4a30e1bf86",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "n45CxV0JdgLXYLYr",
+  "tags": []
+}
